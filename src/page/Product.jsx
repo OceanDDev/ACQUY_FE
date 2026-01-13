@@ -1,22 +1,162 @@
-import { ShoppingCart, Phone, Search, Filter } from 'lucide-react';
-import { Link } from 'react-router-dom';
-
-const products = [
-  { id: 1, name: 'Ắc Quy GS N100', capacity: '100Ah - 12V', price: '2.150.000đ', img: '/img/gs-100d31r_0756.jpg', type: 'Ô tô' },
-  { id: 2, name: 'Ắc Quy GS N150', capacity: '150Ah - 12V', price: '3.450.000đ', img: '/img/gs-100d31r_0756.jpg', type: 'Tàu thuyền' },
-  { id: 3, name: 'Ắc Quy GS N70', capacity: '70Ah - 12V', price: '1.650.000đ', img: '/img/gs-100d31r_0756.jpg', type: 'Ô tô' },
-  { id: 4, name: 'Ắc Quy GS MF 55D23L', capacity: '60Ah - 12V', price: '1.450.000đ', img: '/img/gs-100d31r_0756.jpg', type: 'Xe du lịch' },
-  { id: 5, name: 'Ắc Quy GS N200', capacity: '200Ah - 12V', price: '4.850.000đ', img: '/img/gs-100d31r_0756.jpg', type: 'Xe tải nặng' },
-  { id: 6, name: 'Ắc Quy GS N50', capacity: '50Ah - 12V', price: '1.150.000đ', img: '/img/gs-100d31r_0756.jpg', type: 'Ô tô con' },
-];
+import { ShoppingCart, Phone, Filter } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { productService } from "../service/Admin/products.service";
+import ContactButtons from "../modules/Client/Contact";
+import { categoryService } from "../service/Admin/category.service";
 
 const Product = () => {
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // ✅ CẬP NHẬT: Pagination từ API response
+  const [pagination, setPagination] = useState({
+    current_page: 1,
+    last_page: 1,
+    total: 0,
+    per_page: 12,
+  });
+
+  const [filters, setFilters] = useState({
+    brand_id: null,
+    category_id: null,
+    page: 1,
+  });
+
+  // Fetch categories
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setCategoriesLoading(true);
+        const response = await categoryService.getList();
+        // Kiểm tra nhiều cấu trúc khác nhau
+        let categoryData = [];
+
+        if (Array.isArray(response)) {
+          categoryData = response;
+        } else if (response?.data && Array.isArray(response.data)) {
+          categoryData = response.data;
+        } else if (response?.categories && Array.isArray(response.categories)) {
+          categoryData = response.categories;
+        }
+
+        setCategories(categoryData);
+      } catch (err) {
+        console.error("❌ Không thể tải danh sách categories:", err);
+        setCategories([]);
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // Fetch products
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        console.log("🔵 Bắt đầu fetch products với filters:", filters);
+        const response = await productService.getList(filters);
+        console.log("✅ API Response:", response);
+        console.log(
+          "🔍 Request URL sẽ là: /api/products?",
+          new URLSearchParams(filters).toString()
+        );
+
+        // ✅ API trả về pagination data ở root level
+        setProducts(response.data || []);
+
+        // ✅ CẬP NHẬT PAGINATION - data nằm ngay ở root
+        setPagination({
+          current_page: response.current_page || 1,
+          last_page: response.last_page || 1,
+          total: response.total || 0,
+          per_page: response.per_page || 12,
+        });
+
+        setError(null);
+      } catch (err) {
+        console.error("❌ Product loading error:", err);
+        console.error("❌ Error response:", err.response);
+        console.error("❌ Error status:", err.response?.status);
+        setError("Không thể tải sản phẩm");
+      } finally {
+        setLoading(false);
+        console.log("🔵 Kết thúc fetch products");
+      }
+    };
+
+    fetchProducts();
+  }, [filters]);
+
+  const handleCategoryFilter = (categoryId) => {
+    setFilters((prev) => ({
+      ...prev,
+      category_id: prev.category_id === categoryId ? null : categoryId,
+      page: 1, // Reset về trang 1 khi filter
+    }));
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      brand_id: null,
+      category_id: null,
+      page: 1,
+    });
+  };
+
+  const handlePageChange = (newPage) => {
+    setFilters((prev) => ({
+      ...prev,
+      page: newPage,
+    }));
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-slate-600 font-medium">Đang tải sản phẩm...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center text-red-600">
+          <p className="text-xl font-bold mb-2">⚠️ Lỗi</p>
+          <p>{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+          >
+            Tải lại trang
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-slate-50 min-h-screen pb-20 font-sans">
       <div className="bg-blue-700 py-12 text-white shadow-inner">
         <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl font-black mb-4 uppercase tracking-tighter">Danh mục sản phẩm</h1>
-          <p className="text-blue-100 max-w-2xl mx-auto font-medium">Cung cấp đầy đủ các dòng ắc quy GS chính hãng cho mọi loại xe.</p>
+          <h1 className="text-4xl font-black mb-4 uppercase tracking-tighter">
+            Danh mục sản phẩm
+          </h1>
+          <p className="text-blue-100 max-w-2xl mx-auto font-medium">
+            Cung cấp đầy đủ các dòng ắc quy GS chính hãng cho mọi loại xe.
+          </p>
         </div>
       </div>
 
@@ -24,61 +164,215 @@ const Product = () => {
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Sidebar */}
           <aside className="lg:w-1/4 space-y-6">
-            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
-              <div className="flex items-center gap-2 font-bold text-slate-800 mb-6">
-                <Filter size={20} className="text-blue-600" />
-                <span>Bộ lọc sản phẩm</span>
+            {/* Bộ lọc category */}
+            {!categoriesLoading && categories.length > 0 && (
+              <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
+                <div className="flex items-center gap-2 font-bold text-slate-800 mb-6">
+                  <Filter size={20} className="text-green-600" />
+                  <span>Danh mục</span>
+                </div>
+                <div className="space-y-4">
+                  {categories.map((category) => (
+                    <label
+                      key={category.id}
+                      className="flex items-center gap-3 cursor-pointer group"
+                    >
+                      <input
+                        type="checkbox"
+                        className="w-5 h-5 rounded border-slate-300 text-green-600"
+                        checked={filters.category_id === category.id}
+                        onChange={() => handleCategoryFilter(category.id)}
+                      />
+                      <span className="text-slate-600 group-hover:text-green-700 transition font-medium">
+                        {category.name}
+                      </span>
+                    </label>
+                  ))}
+                </div>
               </div>
-              <div className="space-y-4">
-                {['Ắc quy GS', 'Ắc quy Đồng Nai', 'Ắc quy Varta'].map(brand => (
-                  <label key={brand} className="flex items-center gap-3 cursor-pointer group">
-                    <input type="checkbox" className="w-5 h-5 rounded border-slate-300 text-blue-600" />
-                    <span className="text-slate-600 group-hover:text-blue-700 transition font-medium">{brand}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
+            )}
 
-            <div className="bg-slate-900 p-8 rounded-[2rem] text-white shadow-xl glow-red border border-red-500/20">
-               <h4 className="font-black text-xl mb-2 text-red-500">Cứu hộ ắc quy?</h4>
-               <p className="text-slate-400 text-sm mb-6 font-medium">Gọi ngay để được hỗ trợ tận nơi trong 15 phút tại Long Khánh.</p>
-               <a href="tel:0900xxxxxx" className="bg-red-600 text-white flex items-center justify-center gap-2 py-3 rounded-xl font-black hover:bg-red-500 transition-all shadow-lg shadow-red-900/50 uppercase text-sm">
-                 <Phone size={18} fill="currentColor" /> Gọi 0900.xxx.xxx
-               </a>
-            </div>
+            {/* Nút xóa bộ lọc */}
+            {(filters.brand_id || filters.category_id) && (
+              <button
+                onClick={clearFilters}
+                className="w-full bg-red-50 text-red-600 py-3 px-4 rounded-2xl font-bold text-sm hover:bg-red-100 transition-all border border-red-200"
+              >
+                Xóa tất cả bộ lọc
+              </button>
+            )}
           </aside>
 
           {/* Grid sản phẩm */}
           <div className="lg:w-3/4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-              {products.map((item) => (
-                <Link to="/chi-tiet-san-pham" key={item.id} className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden group hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] transition-all flex flex-col">
-                  <div className="relative p-6 bg-slate-50 flex justify-center items-center group-hover:bg-white transition-colors duration-500 h-56">
-                    <img src={item.img} alt={item.name} className="h-full object-contain drop-shadow-xl group-hover:scale-110 transition-transform duration-500" />
-                    <div className="absolute top-4 left-4 bg-blue-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase">{item.type}</div>
-                  </div>
+            {/* Hiển thị bộ lọc đang áp dụng */}
+            {(filters.brand_id || filters.category_id) && (
+              <div className="mb-6 flex flex-wrap gap-2">
+                {filters.category_id && (
+                  <span className="bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-medium">
+                    Danh mục:{" "}
+                    {categories.find((c) => c.id === filters.category_id)?.name}
+                  </span>
+                )}
+              </div>
+            )}
 
-                  <div className="p-6 flex-grow flex flex-col justify-between">
-                    <div>
-                      <h3 className="text-xl font-bold text-slate-800 mb-1 group-hover:text-blue-700 transition-colors uppercase tracking-tighter">{item.name}</h3>
-                      <p className="text-blue-600 font-bold italic text-sm mb-4">{item.capacity}</p>
-                    </div>
-                    <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                      <div>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase">Giá ưu đãi</p>
-                        <p className="text-xl font-black text-red-600 tracking-tighter">{item.price}</p>
+            {products.length === 0 ? (
+              <div className="text-center py-20">
+                <p className="text-slate-500 text-lg">
+                  Không tìm thấy sản phẩm nào
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-8">
+                  {products.map((item) => (
+                    <Link
+                      to={`/chi-tiet-san-pham/${item.slug}`}
+                      key={item.id}
+                      className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-100 overflow-hidden group hover:shadow-[0_40px_80px_-15px_rgba(37,99,235,0.15)] transition-all duration-500 flex flex-col relative"
+                    >
+                      <div className="relative p-3 md:p-6 bg-slate-50 flex justify-center items-center group-hover:bg-white transition-colors duration-500 h-40 md:h-60">
+                        <img
+                          src={item.image || "/img/gs-100d31r_0756.jpg"}
+                          alt={item.name}
+                          className="h-full object-contain drop-shadow-2xl group-hover:scale-110 transition-transform duration-700"
+                        />
+                        <div className="absolute top-2 left-2 md:top-5 md:left-5 bg-blue-600 text-white px-2 md:px-4 py-0.5 md:py-1.5 rounded-full text-[7px] md:text-[10px] font-black uppercase tracking-wider shadow-lg">
+                          {item.category?.name || "Ắc quy"}
+                        </div>
                       </div>
-                      <div className="bg-slate-900 text-white p-3 rounded-xl group-hover:bg-blue-700 transition-colors">
-                        <ShoppingCart size={20} />
+
+                      <div className="p-3 md:p-7 flex-grow flex flex-col">
+                        <div className="mb-2 md:mb-4">
+                          <h3 className="text-[12px] md:text-xl font-black text-slate-800 mb-1 group-hover:text-blue-700 transition-colors uppercase tracking-tight leading-tight line-clamp-2">
+                            {item.name}
+                          </h3>
+                          <p className="text-blue-600 font-extrabold italic text-[9px] md:text-sm">
+                            {item.capacity || "N/A"} — {item.voltage || "12V"}
+                          </p>
+                        </div>
+
+                        <div className="mt-auto space-y-2 md:space-y-4">
+                          <div className="bg-red-50 border border-red-100 p-2 md:p-4 rounded-xl md:rounded-2xl relative overflow-hidden group-hover:bg-red-600 transition-colors duration-300 text-center md:text-left">
+                            <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+
+                            <p className="hidden md:block text-[10px] font-bold text-red-500 group-hover:text-white/80 uppercase mb-1 transition-colors">
+                              Giá ưu đãi:
+                            </p>
+                            <p className="text-[10px] md:text-xl font-black text-red-600 group-hover:text-white transition-colors tracking-tighter">
+                              LIÊN HỆ BÁO GIÁ
+                            </p>
+                          </div>
+                        </div>
                       </div>
+                    </Link>
+                  ))}
+                </div>
+
+                {/* ✅ PHÂN TRANG - CẢI TIẾN */}
+                {pagination.last_page > 1 && (
+                  <div className="mt-12 flex justify-center items-center gap-2">
+                    {/* Nút Previous */}
+                    <button
+                      onClick={() =>
+                        handlePageChange(pagination.current_page - 1)
+                      }
+                      disabled={pagination.current_page === 1}
+                      className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${
+                        pagination.current_page === 1
+                          ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                          : "bg-white text-slate-700 hover:bg-blue-600 hover:text-white shadow-sm border border-slate-200"
+                      }`}
+                    >
+                      ← Trước
+                    </button>
+
+                    {/* Số trang */}
+                    <div className="flex gap-2">
+                      {Array.from(
+                        { length: pagination.last_page },
+                        (_, i) => i + 1
+                      ).map((page) => {
+                        // Hiển thị: trang đầu, trang cuối, và 2 trang xung quanh trang hiện tại
+                        const showPage =
+                          page === 1 ||
+                          page === pagination.last_page ||
+                          (page >= pagination.current_page - 2 &&
+                            page <= pagination.current_page + 2);
+
+                        if (showPage) {
+                          return (
+                            <button
+                              key={page}
+                              onClick={() => handlePageChange(page)}
+                              className={`w-10 h-10 rounded-xl font-bold text-sm transition-all ${
+                                pagination.current_page === page
+                                  ? "bg-blue-600 text-white shadow-lg scale-110"
+                                  : "bg-white text-slate-700 hover:bg-blue-100 border border-slate-200"
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          );
+                        } else if (
+                          page === pagination.current_page - 3 ||
+                          page === pagination.current_page + 3
+                        ) {
+                          return (
+                            <span
+                              key={page}
+                              className="px-2 text-slate-400 flex items-center"
+                            >
+                              ...
+                            </span>
+                          );
+                        }
+                        return null;
+                      })}
                     </div>
+
+                    {/* Nút Next */}
+                    <button
+                      onClick={() =>
+                        handlePageChange(pagination.current_page + 1)
+                      }
+                      disabled={
+                        pagination.current_page === pagination.last_page
+                      }
+                      className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${
+                        pagination.current_page === pagination.last_page
+                          ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                          : "bg-white text-slate-700 hover:bg-blue-600 hover:text-white shadow-sm border border-slate-200"
+                      }`}
+                    >
+                      Sau →
+                    </button>
                   </div>
-                </Link>
-              ))}
-            </div>
+                )}
+
+                {/* Hiển thị thông tin tổng số sản phẩm */}
+                {pagination.total > 0 && (
+                  <div className="mt-6 text-center text-slate-600 text-sm">
+                    Hiển thị{" "}
+                    <span className="font-bold">{products.length}</span> trong
+                    tổng số{" "}
+                    <span className="font-bold">{pagination.total}</span> sản
+                    phẩm
+                    <span className="mx-2">•</span>
+                    Trang{" "}
+                    <span className="font-bold">
+                      {pagination.current_page}
+                    </span>{" "}
+                    / {pagination.last_page}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>
+      <ContactButtons />
     </div>
   );
 };
