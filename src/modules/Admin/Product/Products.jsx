@@ -13,6 +13,7 @@ const Products = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const [refreshKey, setRefreshKey] = useState(Date.now());
 
   const [pagination, setPagination] = useState({
     currentPage: 1,
@@ -44,12 +45,6 @@ const Products = () => {
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
 
-  const getImageUrl = (imagePath) => {
-    if (!imagePath) return null;
-    if (imagePath.startsWith("http")) return imagePath;
-    return `http://127.0.0.1:8000/storage/${imagePath}`;
-  };
-
   useEffect(() => {
     fetchProducts();
     fetchCategories();
@@ -69,8 +64,11 @@ const Products = () => {
 
       const response = await productService.getAdminList(params);
 
+
       if (response.status) {
         const data = response.data;
+
+
         setProducts(data.data || []);
 
         setPagination({
@@ -83,8 +81,8 @@ const Products = () => {
         });
       }
     } catch (error) {
+      console.error("❌ Fetch products error:", error);
       alert("Lỗi khi tải sản phẩm");
-      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -137,7 +135,16 @@ const Products = () => {
     });
     setCurrentProduct(product);
     setImageFile(null);
-    setImagePreview(getImageUrl(product.images) || "");
+
+    // ✅ Ưu tiên image_url từ backend
+    const previewUrl = product.image_url
+      ? `${product.image_url}?t=${Date.now()}`
+      : product.images
+      ? `https://api.acquyhuyhau.com/storage/${product.images}?t=${Date.now()}`
+      : "";
+
+    console.log("🖼️ Preview URL:", previewUrl);
+    setImagePreview(previewUrl);
     setShowModal(true);
   };
 
@@ -176,6 +183,7 @@ const Products = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+
     if (!formData.name.trim() || !formData.category_id) {
       alert("Vui lòng nhập đầy đủ thông tin bắt buộc");
       return;
@@ -197,30 +205,55 @@ const Products = () => {
       if (formData.type) payload.append("type", formData.type);
       if (formData.voltage) payload.append("voltage", formData.voltage);
       if (formData.capacity) payload.append("capacity", formData.capacity);
-      if (formData.short_desc) payload.append("short_desc", formData.short_desc);
+      if (formData.short_desc)
+        payload.append("short_desc", formData.short_desc);
       if (formData.content) payload.append("content", formData.content);
 
-      // QUAN TRỌNG: Luôn gửi số 0 hoặc 1, KHÔNG BAO GIỜ gửi boolean
-      const isHotValue = formData.is_hot === 1 || formData.is_hot === true || formData.is_hot === "1" ? "1" : "0";
-      const isActiveValue = formData.is_active === 1 || formData.is_active === true || formData.is_active === "1" ? "1" : "0";
-      
+      const isHotValue = formData.is_hot ? "1" : "0";
+      const isActiveValue = formData.is_active ? "1" : "0";
+
       payload.append("is_hot", isHotValue);
       payload.append("is_active", isActiveValue);
 
-      if (imageFile) payload.append("images", imageFile);
+      if (imageFile) {
+        payload.append("images", imageFile);
+      }
+      for (let [key, value] of payload.entries()) {
+        console.log(`  ${key}:`, value);
+      }
+
+      let response;
 
       if (modalMode === "create") {
-        await productService.create(payload);
+        response = await productService.create(payload);
         alert("Tạo sản phẩm thành công!");
       } else {
-        await productService.update(currentProduct.id, payload);
+        response = await productService.update(currentProduct.id, payload);
+        if (response.data) {
+          console.log("Updated product details:", {
+            id: response.data.id,
+            name: response.data.name,
+            images: response.data.images,
+            image_url: response.data.image_url,
+            updated_at: response.data.updated_at,
+          });
+        }
+
         alert("Cập nhật sản phẩm thành công!");
       }
 
-      fetchProducts(pagination.currentPage);
       setShowModal(false);
+      setImageFile(null);
+      setImagePreview("");
+      await fetchProducts(pagination.currentPage);
+
+      // Force refresh images
+      const newRefreshKey = Date.now();
+      setRefreshKey(newRefreshKey);
+
+
     } catch (error) {
-      console.error("Chi tiết lỗi:", error.response?.data);
+
       const errorMsg = error.response?.data?.message || "Có lỗi xảy ra";
       const errors = error.response?.data?.errors;
 
@@ -243,7 +276,8 @@ const Products = () => {
     try {
       await productService.deleteProduct(product.id);
       alert("Xóa sản phẩm thành công!");
-      fetchProducts(pagination.currentPage);
+      await fetchProducts(pagination.currentPage);
+      setRefreshKey(Date.now());
     } catch (error) {
       alert(error.response?.data?.message || "Không thể xóa sản phẩm");
     }
@@ -254,7 +288,7 @@ const Products = () => {
       const payload = new FormData();
       payload.append("is_active", product.is_active ? 0 : 1);
       await productService.update(product.id, payload);
-      fetchProducts(pagination.currentPage);
+      await fetchProducts(pagination.currentPage);
     } catch (error) {
       alert("Có lỗi xảy ra");
       console.error(error);
@@ -389,8 +423,9 @@ const Products = () => {
               ) : (
                 filteredProducts.map((product) => (
                   <ProductRow
-                    key={product.id}
+                    key={`${product.id}-${refreshKey}`}
                     product={product}
+                    refreshKey={refreshKey}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                     onToggleActive={toggleActive}

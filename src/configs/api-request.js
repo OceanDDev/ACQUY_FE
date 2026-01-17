@@ -113,6 +113,13 @@ const URL = {
     list: ENDPOINT_PREFIX + "/admin/users",
     create: ENDPOINT_PREFIX + "/admin/users",
   },
+  news: {
+    list: "/api/news",
+  },  
+  ad_news: {
+    list: "/api/admin/news",
+    create: "/api/admin/news",
+  },
 };
 
 export { URL, ApiServer, DEF_HEADERS };

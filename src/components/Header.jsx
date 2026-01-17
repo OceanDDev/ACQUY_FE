@@ -17,6 +17,7 @@ const Header = () => {
   const menuLinks = [
     { name: "Trang chủ", path: "/" },
     { name: "Sản phẩm", path: "/san-pham" },
+    { name: "Tin tức", path: "/news" },
     { name: "Giới thiệu", path: "/about" },
     { name: "Dịch vụ", path: "/services" },
     { name: "Liên hệ", path: "/contacts" },
@@ -74,14 +75,14 @@ const Header = () => {
       {/* 2. MAIN NAV: Tinh tế & Chuyên nghiệp */}
       <div className="bg-white/95 backdrop-blur-xl py-2 md:py-3 border-b border-gray-100">
         <div className="container mx-auto px-4 flex justify-between items-center">
-          {/* LOGO: Thu nhỏ icon */}
-          <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center transform group-hover:scale-105 transition-all shadow-md">
-              <svg viewBox="0 0 24 24" className="w-5 h-5 text-blue-500 fill-current">
-                <path d="M13 10V3L4 14H11V21L20 10H13Z" />
-              </svg>
-            </div>
-            <h1 className="text-lg font-black leading-none text-slate-900 tracking-tighter uppercase">
+          {/* LOGO */}
+          <Link to="/" className="flex items-center gap-3 group">
+            <img 
+              src="/img/logo.jpg" 
+              alt="Logo Ắc Quy Huy Hậu Bến Cát Bình Dương" 
+              className="h-12 w-auto object-contain transform group-hover:scale-105 transition-all"
+            />
+            <h1 className="text-lg font-black leading-none text-slate-900 tracking-tighter uppercase hidden sm:block">
               ACQUY<span className="text-blue-600 font-black">HUYHAU</span>
             </h1>
           </Link>
@@ -142,4 +143,4 @@ const Header = () => {
   );
 };
 
-export default Header;
+export default Header

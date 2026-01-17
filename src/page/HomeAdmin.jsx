@@ -28,6 +28,8 @@ const AdminLayout = () => {
     { id: 'users', name: 'Quản lý User', icon: Users, path: '/admin/users' },
     { id: 'products', name: 'Quản lý Product', icon: Package, path: '/admin/products' },
     { id: 'categories', name: 'Quản lý Category', icon: FolderOpen, path: '/admin/categories' },
+    { id: 'news', name: 'Quản lý News', icon: FolderOpen, path: '/admin/news' },
+
     { id: 'settings', name: 'Cài đặt', icon: Settings, path: '/admin/settings' },
   ];
 

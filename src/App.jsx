@@ -13,6 +13,9 @@ import Products from "./modules/Admin/Product/Products";
 import About from "./page/About";
 import Services from "./page/Service";
 import Contacts from "./page/Contacts";
+import News from "./page/News";
+import NewsAdmin from "./modules/Admin/News/NewsAdmin"; // ← THÊM IMPORT
+import NewsDetail from "./page/DetailNews";
 
 function App() {
   const location = useLocation();
@@ -46,7 +49,10 @@ function App() {
           <Route path="/about" element={<About />} />
           <Route path="/services" element={<Services />} />
           <Route path="/contacts" element={<Contacts />} />
+          <Route path="/news" element={<News />} />
+
           <Route path="/chi-tiet-san-pham/:slug" element={<Detail />} />
+          <Route path="/tin-tuc/:slug" element={<NewsDetail />} />
 
           {/* ========== ADMIN LOGIN ========== */}
           <Route
@@ -75,6 +81,7 @@ function App() {
             />
             <Route path="categories" element={<Categories />} />
             <Route path="products" element={<Products />} />
+            <Route path="news" element={<NewsAdmin />} />
           </Route>
 
           {/* Catch-all route */}

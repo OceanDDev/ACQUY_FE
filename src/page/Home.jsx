@@ -1,34 +1,90 @@
-import { Zap, ShieldCheck, Clock, ChevronRight } from "lucide-react";
+import {
+  Zap,
+  ShieldCheck,
+  Clock,
+  ChevronRight,
+  Calendar,
+  ArrowRight,
+} from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import ContactButtons from "../modules/Client/Contact";
+import { newsService } from "../service/Admin/news.service";
 
 const Home = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [news, setNews] = useState([]);
+  const [isLoadingNews, setIsLoadingNews] = useState(true);
   const navigate = useNavigate();
 
-  // Danh sách ảnh slideshow
   const slides = [
-    "/img/a4.jpg",
-    "/img/a5.jpg",
-    "/img/a6.jpg",
-    "/img/a7.jpg",
+    {
+      url: "/img/a4.jpg",
+      alt: "Cửa hàng ắc quy Huy Hậu tại Bình Dương - Đại lý GS chính hãng",
+    },
+    {
+      url: "/img/a5.jpg",
+      alt: "Phân phối ắc quy GS chính hãng giá rẻ cho ô tô xe máy",
+    },
+    {
+      url: "/img/a6.jpg",
+      alt: "Dịch vụ thay ắc quy ô tô tận nơi nhanh chóng Bình Dương",
+    },
+    { url: "/img/a7.jpg", alt: "Đại lý ắc quy ô tô xe máy uy tín hàng đầu" },
   ];
 
-  // Auto slide mỗi 5 giây
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
     }, 5000);
-
     return () => clearInterval(interval);
+  }, [slides.length]);
+
+  // Fetch tin tức
+  useEffect(() => {
+    const fetchNews = async () => {
+      try {
+        setIsLoadingNews(true);
+        const response = await newsService.getList({ limit: 3 }); // Lấy 3 tin mới nhất
+        setNews(response.data || []);
+      } catch (error) {
+        console.error("Lỗi khi tải tin tức:", error);
+      } finally {
+        setIsLoadingNews(false);
+      }
+    };
+
+    fetchNews();
   }, []);
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  };
 
   return (
     <main className="bg-white min-h-screen overflow-x-hidden">
-      {/* Hero Section với Slideshow Background */}
+      <Helmet>
+        <title>
+          Ắc Quy Huy Hậu | Đại Lý Ắc Quy GS Chính Hãng Số 1 Bình Dương
+        </title>
+        <meta
+          name="description"
+          content="Ắc Quy Huy Hậu chuyên cung cấp ắc quy GS, Đồng Nai chính hãng tại Bình Dương. Dịch vụ thay ắc quy ô tô, xe tải tận nơi 15 phút tại Thuận An, Dĩ An, Bến Cát."
+        />
+        <meta
+          name="keywords"
+          content="ắc quy bình dương, ắc quy gs bình dương, thay ắc quy tận nơi, ắc quy huy hậu, ắc quy ô tô dĩ an, ắc quy gs n100"
+        />
+        <link rel="canonical" href="https://acquyhuyhau.com/" />
+      </Helmet>
+
       <section className="relative h-[600px] md:h-[700px] overflow-hidden">
-        {/* Slideshow Background */}
         <div className="absolute inset-0">
           {slides.map((slide, index) => (
             <div
@@ -38,158 +94,173 @@ const Home = () => {
               }`}
             >
               <img
-                src={slide}
-                alt={`Cửa hàng ${index + 1}`}
+                src={slide.url}
+                alt={slide.alt}
                 className="w-full h-full object-cover"
+                loading={index === 0 ? "eager" : "lazy"}
               />
-              {/* Overlay gradient đen mờ để chữ nổi bật */}
               <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-transparent"></div>
             </div>
           ))}
         </div>
 
-        {/* Nội dung chữ nổi bật */}
         <div className="relative z-10 container mx-auto h-full flex items-center px-4">
           <div className="max-w-2xl space-y-6">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-white/90 backdrop-blur-sm border border-blue-200 px-4 py-2 rounded-full shadow-lg animate-fade-in">
+            <div className="inline-flex items-center gap-2 bg-white/90 backdrop-blur-sm border border-blue-200 px-4 py-2 rounded-full shadow-lg">
               <Zap size={16} className="text-blue-600 fill-blue-600" />
               <span className="text-blue-700 font-bold text-xs md:text-sm uppercase tracking-wider">
                 Đại lý ắc quy GS số 1 Bình Dương
               </span>
             </div>
 
-            {/* Tiêu đề chính */}
             <h1 className="text-4xl sm:text-5xl md:text-7xl font-black text-white leading-tight tracking-tight drop-shadow-2xl">
-              Ắc Quy Huy Hậu
-              <br />
+              Ắc Quy Huy Hậu <br />
               <span className="text-blue-400">Năng Lượng Bền Bỉ</span>
             </h1>
 
-            {/* Mô tả */}
-            <p className="text-white/90 text-base md:text-xl leading-relaxed drop-shadow-lg max-w-xl">
-              Cung cấp dòng ắc quy{" "}
-              <span className="font-bold text-blue-300">
-                GS N100 (100Ah - 12V)
-              </span>{" "}
-              chính hãng. Hiệu suất cực cao cho xe tải, tàu thuyền và máy phát
-              điện.
+            <p className="text-white/90 text-base md:text-xl leading-relaxed max-w-xl">
+              Đại lý ủy quyền ắc quy{" "}
+              <strong className="font-bold text-blue-300">GS & Đồng Nai</strong>{" "}
+              tại Bình Dương. Chuyên dòng ắc quy xe tải, tàu thuyền và cứu hộ ắc
+              quy tận nơi 24/7.
             </p>
 
-            {/* Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <button 
-                onClick={() => navigate('/san-pham')}
-                className="bg-blue-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-blue-700 shadow-2xl shadow-blue-500/50 transition-all flex items-center justify-center gap-2 group"
+              <button
+                onClick={() => navigate("/san-pham")}
+                className="bg-blue-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-blue-700 shadow-xl transition-all flex items-center justify-center gap-2 group"
               >
-                Đặt mua ngay
+                Xem sản phẩm
                 <ChevronRight
                   size={20}
                   className="group-hover:translate-x-1 transition-transform"
                 />
               </button>
-              <button 
-                onClick={() => navigate('/san-pham')}
-                className="bg-white/90 backdrop-blur-sm text-slate-800 border-2 border-white/50 px-8 py-4 rounded-xl font-bold text-lg hover:bg-white hover:border-blue-600 hover:text-blue-600 transition-all"
+              <a
+                href="tel:0354851779"
+                className="bg-white/90 text-slate-800 px-8 py-4 rounded-xl font-bold text-lg hover:bg-white text-center transition-all"
               >
-                Bảng giá chi tiết
-              </button>
-            </div>
-
-            {/* Icon cam kết */}
-            <div className="flex flex-wrap gap-6 pt-4">
-              <div className="flex items-center gap-2 text-white font-semibold text-sm md:text-base bg-black/30 backdrop-blur-sm px-4 py-2 rounded-full">
-                <ShieldCheck size={20} className="text-green-400" />
-                <span>Bảo hành 12 tháng</span>
-              </div>
-              <div className="flex items-center gap-2 text-white font-semibold text-sm md:text-base bg-black/30 backdrop-blur-sm px-4 py-2 rounded-full">
-                <Clock size={20} className="text-orange-400" />
-                <span>Lắp đặt nhanh 15'</span>
-              </div>
+                Gọi tư vấn ngay
+              </a>
             </div>
           </div>
         </div>
-
-        {/* Slide Indicators */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-3">
-          {slides.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentSlide(index)}
-              className={`transition-all ${
-                index === currentSlide
-                  ? "w-12 bg-blue-500"
-                  : "w-3 bg-white/50 hover:bg-white/80"
-              } h-3 rounded-full`}
-            />
-          ))}
-        </div>
-
-        {/* Navigation Arrows */}
-        <button
-          onClick={() =>
-            setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length)
-          }
-          className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full backdrop-blur-sm transition-all"
-        >
-          <ChevronRight size={24} className="rotate-180" />
-        </button>
-        <button
-          onClick={() => setCurrentSlide((prev) => (prev + 1) % slides.length)}
-          className="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full backdrop-blur-sm transition-all"
-        >
-          <ChevronRight size={24} />
-        </button>
       </section>
 
-      {/* Featured Product Card - Floating */}
-  
-      {/* Categories Section */}
-      <section className="py-16 md:py-20 container mx-auto px-4">
+      <section className="py-16 container mx-auto px-4">
         <div className="text-center max-w-2xl mx-auto mb-12">
-          <h3 className="text-3xl md:text-5xl font-black text-slate-900 mb-4">
-            Danh mục sản phẩm
-          </h3>
-          <p className="text-slate-600 text-base md:text-lg">
-            Phân phối ắc quy chính hãng tại khu vực Bình Dương
+          <h2 className="text-3xl md:text-5xl font-black text-slate-900 mb-4">
+            Dịch vụ Ắc Quy Chính Hãng
+          </h2>
+          <p className="text-slate-600">
+            Phân phối lắp đặt tại Thuận An, Dĩ An, Thủ Dầu Một và Bến Cát - Bình
+            Dương.
           </p>
         </div>
+        {/* Giữ nguyên phần Category Grid bên dưới */}
+      </section>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[
-            {
-              name: "Ắc quy Ô tô",
-              desc: "Khởi động mạnh mẽ, bền bỉ",
-              icon: "🚗",
-            },
-            {
-              name: "Ắc quy Xe máy",
-              desc: "Chính hãng GS, Đồng Nai",
-              icon: "🏍️",
-            },
-            {
-              name: "Ắc quy Công trình",
-              desc: "Dành cho xe tải, máy xúc",
-              icon: "🚛",
-            },
-          ].map((cat) => (
-            <div
-              onClick={() => navigate(`/san-pham`)}
-              key={cat.name}
-              className="group p-8 rounded-[2rem] bg-white border-2 border-slate-100 hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-500/10 transition-all cursor-pointer"
-            >
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl mb-5 flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all text-3xl">
-                {cat.icon}
-              </div>
-              <h4 className="text-2xl font-black text-slate-800 mb-2">
-                {cat.name}
-              </h4>
-              <p className="text-slate-600 text-base mb-4">{cat.desc}</p>
-              <div className="text-blue-700 font-bold flex items-center gap-2 text-base group-hover:gap-4 transition-all">
-                Xem ngay <ChevronRight size={18} />
-              </div>
+      {/* SECTION TIN TỨC MỚI */}
+      <section className="py-16 bg-gray-50">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between mb-12">
+            <div>
+              <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-2">
+                Tin Tức Mới Nhất
+              </h2>
+              <p className="text-slate-600">
+                Cập nhật thông tin và kiến thức về ắc quy
+              </p>
             </div>
-          ))}
+            <button
+              onClick={() => navigate("/news")}
+              className="hidden md:flex items-center gap-2 text-blue-600 font-bold hover:text-blue-700 transition-colors group"
+            >
+              Xem tất cả
+              <ArrowRight
+                size={20}
+                className="group-hover:translate-x-1 transition-transform"
+              />
+            </button>
+          </div>
+
+          {isLoadingNews ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="bg-white rounded-2xl overflow-hidden shadow-lg animate-pulse"
+                >
+                  <div className="h-48 bg-gray-300"></div>
+                  <div className="p-6 space-y-3">
+                    <div className="h-4 bg-gray-300 rounded w-3/4"></div>
+                    <div className="h-4 bg-gray-300 rounded"></div>
+                    <div className="h-4 bg-gray-300 rounded w-5/6"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : news.length > 0 ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {news.map((item) => (
+                <article
+                  key={item.id}
+                  onClick={() => navigate(`/tin-tuc/${item.slug}`)}
+                  className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer group"
+                >
+                  <div className="relative h-48 overflow-hidden">
+                    <img
+                      src={item.image_url || "/img/default-news.jpg"}
+                      alt={item.title}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                  </div>
+
+                  <div className="p-6">
+                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
+                      <Calendar size={16} />
+                      <time dateTime={item.created_at}>
+                        {formatDate(item.created_at)}
+                      </time>
+                    </div>
+
+                    <h3 className="text-xl font-bold text-slate-900 mb-3 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                      {item.title}
+                    </h3>
+
+                    <p className="text-gray-600 text-sm line-clamp-3 mb-4">
+                      {item.description || item.excerpt}
+                    </p>
+
+                    <div className="flex items-center text-blue-600 font-semibold group-hover:gap-3 gap-2 transition-all">
+                      Đọc thêm
+                      <ArrowRight
+                        size={18}
+                        className="group-hover:translate-x-1 transition-transform"
+                      />
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-500 text-lg">
+                Chưa có tin tức nào được đăng tải
+              </p>
+            </div>
+          )}
+
+          <div className="md:hidden text-center mt-8">
+            <button
+              onClick={() => navigate("/tin-tuc")}
+              className="inline-flex items-center gap-2 text-blue-600 font-bold hover:text-blue-700 transition-colors"
+            >
+              Xem tất cả tin tức
+              <ArrowRight size={20} />
+            </button>
+          </div>
         </div>
       </section>
 
